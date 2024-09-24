@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { CopyToClipboard } from "react-copy-to-clipboard";
 import Peer from "simple-peer";
 import io from "socket.io-client";
 import "./App.scss";
 
-const socket = io.connect("http://localhost:12000");
+const socket = io.connect("localhost:12000");
 
 function App() {
   const [me, setMe] = useState("");
@@ -16,6 +15,7 @@ function App() {
   const [idToCall, setIdToCall] = useState("");
   const [callEnded, setCallEnded] = useState(false);
   const [name, setName] = useState("");
+  const [callerName, setCallerName] = useState("");
   const myVideo = useRef(null);
   const userVideo = useRef(null);
   const connectionRef = useRef(null);
@@ -40,6 +40,7 @@ function App() {
     socket.on("callUser", (data) => {
       setReceivingCall(true);
       setCaller(data.from);
+      setCallerName(data.name); 
       setCallerSignal(data.signal);
     });
 
@@ -60,7 +61,7 @@ function App() {
         userToCall: id,
         signalData: data,
         from: me,
-        name: name,
+        name: name, 
       });
     });
 
@@ -78,8 +79,9 @@ function App() {
       console.error("Peer connection error:", err);
     });
 
-    socket.on("callAccepted", (signal) => {
+    socket.on("callAccepted", (signal, callerName) => {
       setCallAccepted(true);
+      setCallerName(callerName);
       peer.signal(signal);
     });
 
@@ -94,7 +96,11 @@ function App() {
     });
 
     peer.on("signal", (data) => {
-      socket.emit("answerCall", { signal: data, to: caller });
+      socket.emit("answerCall", {
+        signal: data,
+        to: caller,
+        name: name,
+      });
     });
 
     peer.on("stream", (stream) => {
@@ -147,11 +153,21 @@ function App() {
     }
   };
 
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(me);
+      alert("ID copied to clipboard!");
+    } catch (err) {
+      console.error("Failed to copy ID: ", err);
+    }
+  };
+
   return (
     <div className="container">
       <h1 className="title">Video Chat</h1>
       <div className="video-container">
         <div className="video">
+          <h2>{name}</h2>
           {stream && (
             <video
               playsInline
@@ -163,6 +179,7 @@ function App() {
           )}
         </div>
         <div className="video">
+          <h2>{callerName}</h2> 
           {callAccepted && !callEnded && (
             <video playsInline ref={userVideo} autoPlay className="video-box" />
           )}
@@ -176,9 +193,7 @@ function App() {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <CopyToClipboard text={me}>
-            <button>Copy ID</button>
-          </CopyToClipboard>
+          <button onClick={copyToClipboard}>Copy ID</button>
         </div>
         <div>
           <input
@@ -196,7 +211,7 @@ function App() {
         <div>
           {receivingCall && !callAccepted && (
             <div>
-              <h2>Incoming call...</h2>
+              <h2>{callerName}...</h2> 
               <button onClick={answerCall}>Answer</button>
             </div>
           )}
