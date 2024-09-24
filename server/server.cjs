@@ -20,12 +20,12 @@ io.on("connection", (socket) => {
     io.to(data.userToCall).emit("callUser", {
       signal: data.signalData,
       from: data.from,
-      name: data.name,
+      name: data.name, 
     });
   });
 
   socket.on("answerCall", (data) => {
-    io.to(data.to).emit("callAccepted", data.signal);
+    io.to(data.to).emit("callAccepted", data.signal, data.name);
   });
 
   socket.on("endCall", (data) => {
@@ -37,7 +37,6 @@ io.on("connection", (socket) => {
     console.log("Client disconnected");
   });
 });
-
 
 const PORT = process.env.REACT_APP_PORT || 12000;
 server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
